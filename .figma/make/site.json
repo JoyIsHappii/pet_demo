@@ -1,0 +1,10 @@
+{
+  "description": "Streamline project management with an intuitive dashboard that tracks tasks, deadlines, and team collaboration for enhanced productivity.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
