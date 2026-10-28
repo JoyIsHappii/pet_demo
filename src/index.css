@@ -520,6 +520,16 @@ footer > p { color: var(--muted); font-size: 12px; }
 .compact-post-type button.active { background: var(--olive-dark); border-color: var(--olive-dark); color: white; }
 .compact-post-type button.lost.active { background: var(--coral); border-color: var(--coral); }
 
+/* Mark as found: one pop-up, ask then celebrate */
+.found-modal { gap: 12px; }
+.found-photo { position: relative; display: block; width: 96px; height: 96px; margin-bottom: 4px; }
+.found-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 4px var(--white), 0 0 0 7px var(--sage-soft); }
+.found-photo i { position: absolute; right: -2px; bottom: -2px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--success); color: white; border: 3px solid var(--white); font-style: normal; animation: pop-in .3s var(--ease); }
+.found-effects { list-style: none; margin: 4px 0 6px; padding: 14px 16px; display: grid; gap: 8px; width: 100%; max-width: 380px; border-radius: var(--r-lg); background: var(--ivory); text-align: left; }
+.found-effects li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--brown-2); }
+.found-effects svg { color: var(--olive); flex: 0 0 auto; }
+.found-modal .modal-lead strong { color: var(--success); }
+
 /* =========================================================================
    Sitter board
    ========================================================================= */

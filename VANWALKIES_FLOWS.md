@@ -154,11 +154,18 @@ Allow visitors to discover Avancado without logging in.
 
 ## 4.6 Mark a Lost Pet as Found
 
-1. Owner views their Lost Pet post.
-2. Owner selects Mark as Found.
-3. Status changes from Lost Pet Alert to Pet Found.
-4. Red alert styling changes to green resolved styling.
-5. The post remains visible as a resolved community update.
+Available from the owner’s Lost Pet post in Community and from the lost-pet panel in Messages. Both use the same pop-up.
+
+1. Owner selects **Mark as found**.
+2. A pop-up asks **“Is [pet] home safe?”** with the pet’s photo and what will happen:
+   - The alert changes to Pet found.
+   - It leaves the Lost and Found tab.
+   - Chats about it move to Archive.
+3. Owner chooses:
+   - **Not yet**: closes the pop-up; nothing changes.
+   - **Yes, she’s / he’s / they’re home**: uses the pet profile’s gender when known, otherwise “they’re”.
+4. On Yes, the post is marked found and the same pop-up turns into a celebration: **“Welcome home, [pet]!”**, thanking the neighbours who messaged about the alert by name.
+5. **Done** (or Escape) closes it. The owner stays where they were, and the post is now green (Pet found) and still visible as a resolved update.
 
 ---
 

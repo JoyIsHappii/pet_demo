@@ -3,12 +3,14 @@ import { Activity, Archive, ArchiveRestore, ArrowLeft, CalendarDays, Check, Circ
 import { Conversation, firstName, ME } from "./data";
 import { useStore } from "./store";
 import { Badge, EmptyState, PersonAvatar } from "./ui";
+import { FoundPetModal } from "./Community";
 
 type Filter = "all" | "sitting" | "lost" | "archived";
 const filterLabels: Record<Filter, string> = { all: "All", sitting: "Sitting", lost: "Lost and Found", archived: "Archive" };
 
 function ContextPanel({ conversation }: { conversation: Conversation }) {
-  const { posts, requests, markFound, notify, setPage } = useStore();
+  const { posts, requests, setPage } = useStore();
+  const [foundOpen, setFoundOpen] = useState(false);
   if (conversation.context === "lost") {
     const post = posts.find((p) => String(p.id) === conversation.ref);
     if (!post) return <aside className="message-context-panel"><p>This post is no longer available.</p></aside>;
@@ -19,8 +21,9 @@ function ContextPanel({ conversation }: { conversation: Conversation }) {
         <div className="context-author"><PersonAvatar name={post.author} size="sm" /><div><strong>{firstName(post.author)}</strong><small>{post.location} · {post.date}</small></div></div>
         <img loading="lazy" src={post.image} alt={post.pet || "Lost pet"} />
         <p>{post.caption}</p>
-        {mine && post.status === "lost" && <button className="primary-button full" onClick={() => { markFound(post.id); notify("Marked as found. This chat moved to your archive."); }}><Check size={15} /> Mark as found</button>}
+        {mine && post.status === "lost" && <button className="primary-button full" onClick={() => setFoundOpen(true)}><Check size={15} /> Mark as found</button>}
         <button className="secondary-button full" onClick={() => setPage("community")}>View in Community</button>
+        {foundOpen && <FoundPetModal post={post} onClose={() => setFoundOpen(false)} />}
       </aside>
     );
   }

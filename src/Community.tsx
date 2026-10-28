@@ -5,12 +5,50 @@ import { useStore } from "./store";
 import { EmptyState, Modal, PersonAvatar, ReportModal } from "./ui";
 import SideRail from "./Rail";
 
+/** Mark as found: one pop-up that asks first, then celebrates in place. Used in Community and Messages. */
+export function FoundPetModal({ post, onClose }: { post: CommunityPost; onClose: () => void }) {
+  const { markFound, pets, conversations } = useStore();
+  const [step, setStep] = useState<"confirm" | "done">("confirm");
+  const petName = post.pet.split(",")[0].trim() || "your pet";
+  const profile = pets.find((p) => p.owner === post.author && p.name === petName);
+  const pronoun = profile ? (profile.gender === "Female" ? "she’s" : "he’s") : "they’re";
+  const helpers = [...new Set(conversations.filter((c) => c.context === "lost" && c.ref === String(post.id)).map((c) => firstName(c.with)))];
+  const thanks = helpers.length > 1 ? `${helpers.slice(0, -1).join(", ")} and ${helpers[helpers.length - 1]}` : helpers[0];
+
+  if (step === "done") return (
+    <Modal onClose={onClose}>
+      <div className="center-modal found-modal">
+        <span className="found-photo"><img src={post.image} alt="" /><i><Check size={16} /></i></span>
+        <h2>Welcome home, {petName}!</h2>
+        <p className="modal-lead">{thanks ? `Thank you to ${thanks} for helping ${petName} get home.` : `Thank you to every neighbour who kept an eye out for ${petName}.`} Your alert now shows <strong>Pet found</strong>.</p>
+        <button className="primary-button" onClick={onClose}>Done</button>
+      </div>
+    </Modal>
+  );
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="center-modal found-modal">
+        <span className="found-photo"><img src={post.image} alt="" /></span>
+        <h2>Is {petName} home safe?</h2>
+        <ul className="found-effects">
+          <li><CircleCheckBig size={16} /> The alert changes to <strong>Pet found</strong></li>
+          <li><Flag size={16} /> It leaves the Lost and Found tab</li>
+          <li><MessageCircle size={16} /> Chats about it move to Archive</li>
+        </ul>
+        <div className="modal-actions center"><button className="secondary-button" onClick={onClose}>Not yet</button><button className="primary-button" onClick={() => { markFound(post.id); setStep("done"); }}>Yes, {pronoun} home</button></div>
+      </div>
+    </Modal>
+  );
+}
+
 export function PostCard({ post, compact = false }: { post: CommunityPost; compact?: boolean }) {
-  const { authenticated, pawed, togglePaw, requireAuth, openProfile, openConversation, markFound, deletePost, notify } = useStore();
+  const { authenticated, pawed, togglePaw, requireAuth, openProfile, openConversation, deletePost, notify } = useStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [foundOpen, setFoundOpen] = useState(false);
   const mine = authenticated && post.author === ME;
   const hasPaw = pawed.includes(post.id);
 
@@ -24,7 +62,7 @@ export function PostCard({ post, compact = false }: { post: CommunityPost; compa
   const cardClass = post.status === "lost" ? "post-card lost-post" : post.status === "found" ? "post-card found-post" : "post-card";
   return (
     <article className={cardClass}>
-      {post.status === "lost" && <div className="lost-alert"><span><Flag size={14} /> {mine ? "Lost pet alert" : "Lost and found alert"}</span>{mine && <button onClick={() => { markFound(post.id); notify("Wonderful news! The alert is now resolved and related chats were archived."); }}><Check size={13} /> Mark as found</button>}</div>}
+      {post.status === "lost" && <div className="lost-alert"><span><Flag size={14} /> {mine ? "Lost pet alert" : "Lost and found alert"}</span>{mine && <button onClick={() => setFoundOpen(true)}><Check size={13} /> Mark as found</button>}</div>}
       {post.status === "found" && <div className="lost-alert found-alert"><span><CircleCheckBig size={14} /> Pet found · Reunited</span></div>}
       <div className="post-author featured-post-author">
         <button className="avatar-link" onClick={() => openProfile(post.author)} aria-label={`Open ${post.author}’s profile`}><PersonAvatar name={post.author} /></button>
@@ -47,6 +85,7 @@ export function PostCard({ post, compact = false }: { post: CommunityPost; compa
         <p className="featured-post-caption"><strong>{firstName(post.author)}</strong> {post.caption}</p>
         {post.status === "lost" && !mine && <button className="primary-button full found-pet-button" onClick={() => openConversation(post.author, "lost", String(post.id), `Hi ${firstName(post.author)}! I think send message. `)}><Send size={16} /> send message</button>}
       </div>
+      {foundOpen && <FoundPetModal post={post} onClose={() => setFoundOpen(false)} />}
       {reporting && <ReportModal target="post" targetId={String(post.id)} subject={`${post.author}’s post`} title="Report post" onClose={() => setReporting(false)} />}
       {editing && <PostComposer existing={post} onClose={() => setEditing(false)} />}
       {confirmDelete && <Modal onClose={() => setConfirmDelete(false)}>
