@@ -1,45 +1,117 @@
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Beer, ChevronRight, Clock, Coffee, Compass, Flag, Heart, HeartPulse, Hotel, ImagePlus, MapPin, Mountain, MoreVertical, Plus, Star, Store, Trees, X } from "lucide-react";
-import { Place, SpotCategory } from "./data";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Beer, ChevronRight, Clock, Coffee, Flag, Heart, HeartPulse, Hotel, ImagePlus, LocateFixed, MapPin, Minus, Mountain, MoreVertical, Plus, Search, Star, Store, Trees, X, History, AlertTriangle } from "lucide-react";
+import { isoDay, Place, SpotCategory } from "./data";
 import { useStore } from "./store";
 import { PersonAvatar, ReportModal, StarRating } from "./ui";
 
-export const mapCategories: { name: SpotCategory; color: string; icon: typeof Trees }[] = [
-  // Earthy, avocado-led set. Each colour keeps at least 3:1 against white for map pins.
-  { name: "Parks & Off-Leash", color: "#568203", icon: Trees },
-  { name: "Cafes & Restaurants", color: "#B7791F", icon: Coffee },
-  { name: "Pubs & Breweries", color: "#8A5A2B", icon: Beer },
-  { name: "Retail & Shops", color: "#B8664A", icon: Store },
-  { name: "Pet Services", color: "#3B7DB5", icon: HeartPulse },
-  { name: "Hotels", color: "#7A5BB0", icon: Hotel },
-  { name: "Hiking Trails", color: "#354F05", icon: Mountain },
+/** Categories with the short labels used on chips, list rows and pins. */
+export const mapCategories: { name: SpotCategory; label: string; icon: typeof Trees }[] = [
+  { name: "Parks & Off-Leash", label: "Parks", icon: Trees },
+  { name: "Cafes & Restaurants", label: "Cafés", icon: Coffee },
+  { name: "Pubs & Breweries", label: "Pubs", icon: Beer },
+  { name: "Retail & Shops", label: "Shops", icon: Store },
+  { name: "Pet Services", label: "Pet services", icon: HeartPulse },
+  { name: "Hotels", label: "Stays", icon: Hotel },
+  { name: "Hiking Trails", label: "Trails", icon: Mountain },
 ];
-export const categoryColor = (name: string) => mapCategories.find((c) => c.name === name)?.color || "#568203";
+const categoryOf = (name: string) => mapCategories.find((c) => c.name === name) || mapCategories[0];
+/** All categories share the brand colour; the icon tells them apart. */
+export const categoryColor = (_name: string) => "var(--olive-dark)";
 const average = (place: Place) => (place.reviews.length ? place.reviews.reduce((sum, r) => sum + r.rating, 0) / place.reviews.length : place.rating);
 
+/* ---------------------------------------------------------------------------
+   MOCK MAP — design mock-up only.
+   A static picture made from Esri "Light Gray Canvas" tiles (base + labels,
+   no API key) at zoom 13, with pins placed from each place's real
+   latitude / longitude. Production must use a properly licensed provider
+   chosen by development (Esri basemaps need an ArcGIS account in production).
+   Development replaces this one component with the real map (e.g. Leaflet).
+   Keep: the same props, the pin design (see .map-pin in index.css), the
+   tap-to-select behaviour, gliding to the selected place, the location and
+   zoom controls, the place popup, and the attribution line.
+   See "Map spec" in HANDOFF.md.
+--------------------------------------------------------------------------- */
+const TILE = 256;
+const Z = 13;
+const WORLD = TILE * 2 ** Z;
+const lngToX = (lng: number) => ((lng + 180) / 360) * WORLD;
+const latToY = (lat: number) => { const r = (lat * Math.PI) / 180; return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * WORLD; };
+// Area covered by the mock picture: Point Grey / UBC to Commercial Drive, False Creek to Coal Harbour.
+const BOUNDS = { west: -123.245, east: -123.045, north: 49.302, south: 49.238 };
+const X0 = Math.floor(lngToX(BOUNDS.west) / TILE), X1 = Math.floor(lngToX(BOUNDS.east) / TILE);
+const Y0 = Math.floor(latToY(BOUNDS.north) / TILE), Y1 = Math.floor(latToY(BOUNDS.south) / TILE);
+const TILES = Array.from({ length: (X1 - X0 + 1) * (Y1 - Y0 + 1) }, (_, i) => ({ x: X0 + (i % (X1 - X0 + 1)), y: Y0 + Math.floor(i / (X1 - X0 + 1)) }));
+const W = (X1 - X0 + 1) * TILE, H = (Y1 - Y0 + 1) * TILE;
+/** Position of a lat/lng inside the mock picture, in pixels at zoom 1. */
+const toWorld = (lat: number, lng: number) => ({ x: lngToX(lng) - X0 * TILE, y: latToY(lat) - Y0 * TILE });
+const ZOOMS = [0.75, 1, 1.25, 1.5];
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+const MY_LOCATION = { lat: 49.2685, lng: -123.1555 }; // mock "you are here" in Kitsilano
+
 export function MapCanvas({ places, selected, onSelect, onDetails, showPopup = true }: { places: Place[]; selected?: Place; onSelect: (place: Place) => void; onDetails?: (place: Place) => void; showPopup?: boolean }) {
-  const [zoom, setZoom] = useState(1);
+  const [zoomIndex, setZoomIndex] = useState(showPopup ? 0 : 1); // full map starts zoomed out to show every place
+  const zoom = ZOOMS[zoomIndex];
   const [located, setLocated] = useState(false);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; panX: number; panY: number } | null>(null);
-  const useLocation = () => {
-    if (navigator.geolocation) navigator.geolocation.getCurrentPosition(() => setLocated(true), () => setLocated(true));
-    else setLocated(true);
+  // Start on the selected place when the map is a small preview, otherwise frame all places.
+  const [center, setCenter] = useState(() => {
+    if (selected && !showPopup) return toWorld(selected.latitude, selected.longitude);
+    const pts = places.map((p) => toWorld(p.latitude, p.longitude));
+    if (!pts.length) return { x: W / 2, y: H / 2 };
+    return { x: (Math.min(...pts.map((p) => p.x)) + Math.max(...pts.map((p) => p.x))) / 2, y: (Math.min(...pts.map((p) => p.y)) + Math.max(...pts.map((p) => p.y))) / 2 };
+  });
+  const [drag, setDrag] = useState<{ x: number; y: number; cx: number; cy: number } | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 800, h: 500 });
+  useEffect(() => {
+    const el = boxRef.current; if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setBox({ w: entry.contentRect.width, h: entry.contentRect.height }));
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  // Never scroll past the edge of the mock picture.
+  const clamp = (c: { x: number; y: number }) => {
+    const hw = box.w / 2 / zoom, hh = box.h / 2 / zoom;
+    return { x: W <= hw * 2 ? W / 2 : Math.min(W - hw, Math.max(hw, c.x)), y: H <= hh * 2 ? H / 2 : Math.min(H - hh, Math.max(hh, c.y)) };
   };
+  const view = clamp(center);
+  // Glide to a newly selected place, like a real map focusing a result.
+  const lastSelected = useRef(selected?.id);
+  useEffect(() => {
+    if (selected?.id === lastSelected.current) return;
+    lastSelected.current = selected?.id;
+    if (selected) setCenter(toWorld(selected.latitude, selected.longitude));
+  }, [selected?.id]);
+  const useLocation = () => {
+    const go = () => { setLocated(true); setCenter(toWorld(MY_LOCATION.lat, MY_LOCATION.lng)); };
+    if (navigator.geolocation) navigator.geolocation.getCurrentPosition(go, go); else go();
+  };
+  const screen = (lat: number, lng: number) => { const p = toWorld(lat, lng); return { left: (p.x - view.x) * zoom, top: (p.y - view.y) * zoom }; };
+  const me = screen(MY_LOCATION.lat, MY_LOCATION.lng);
   return (
-    <div className="map-canvas interactive-map" onPointerDown={(event) => { if ((event.target as HTMLElement).closest("button")) return; event.currentTarget.setPointerCapture(event.pointerId); setDragStart({ x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }); }} onPointerMove={(event) => { if (dragStart) setPan({ x: dragStart.panX + event.clientX - dragStart.x, y: dragStart.panY + event.clientY - dragStart.y }); }} onPointerUp={() => setDragStart(null)}>
-      <div className="map-stage" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-        <div className="map-water"></div><div className="road road-one"></div><div className="road road-two"></div><div className="road road-three"></div><div className="park-shape"></div>
-        <span className="map-label label-downtown">DOWNTOWN</span><span className="map-label label-park">STANLEY PARK</span><span className="map-label label-harbour">COAL HARBOUR</span>
-        {places.map((place) => { const color = categoryColor(place.category); const active = selected?.id === place.id; return <button key={place.id} className={active ? "map-pin active" : "map-pin"} style={{ left: `${place.x}%`, top: `${place.y}%`, color: active ? "white" : color, background: active ? color : "white" }} onClick={() => onSelect(place)} aria-label={place.name}><MapPin size={21} fill="currentColor" />{place.sponsored && <i className="pin-ad">AD</i>}</button>; })}
-        {located && <div className="user-location-pin"><span></span></div>}
+    <div ref={boxRef} className={drag ? "map-canvas is-dragging" : "map-canvas"}
+      onPointerDown={(e) => { if ((e.target as HTMLElement).closest("button, a, .map-popup")) return; e.currentTarget.setPointerCapture(e.pointerId); setDrag({ x: e.clientX, y: e.clientY, cx: view.x, cy: view.y }); }}
+      onPointerMove={(e) => { if (!drag) return; setCenter(clamp({ x: drag.cx - (e.clientX - drag.x) / zoom, y: drag.cy - (e.clientY - drag.y) / zoom })); }}
+      onPointerUp={() => setDrag(null)}>
+      <div className="map-tiles" style={{ width: W, height: H, transform: `translate(${-view.x * zoom}px, ${-view.y * zoom}px) scale(${zoom})` }} aria-hidden="true">
+        {TILES.map((t) => <img key={`b${t.x}-${t.y}`} src={`${ESRI}/World_Light_Gray_Base/MapServer/tile/${Z}/${t.y}/${t.x}`} alt="" draggable={false} style={{ left: (t.x - X0) * TILE, top: (t.y - Y0) * TILE }} />)}
+        {TILES.map((t) => <img key={`l${t.x}-${t.y}`} className="map-labels" src={`${ESRI}/World_Light_Gray_Reference/MapServer/tile/${Z}/${t.y}/${t.x}`} alt="" draggable={false} style={{ left: (t.x - X0) * TILE, top: (t.y - Y0) * TILE }} />)}
       </div>
-      <div className="map-controls"><button className="location-control" onClick={useLocation}><Compass size={17} /> {located ? "Location on" : "Use my location"}</button><div><button onClick={() => setZoom((value) => Math.min(1.6, value + 0.1))} aria-label="Zoom in"><Plus /></button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom((value) => Math.max(0.8, value - 0.1))} aria-label="Zoom out">−</button></div></div>
-      <div className="map-hint">Drag to move · Use controls to zoom</div>
+      <div className="map-pins">
+        {places.map((place) => { const Icon = categoryOf(place.category).icon; const active = selected?.id === place.id; return (
+          <button key={place.id} className={active ? "map-pin active" : "map-pin"} style={screen(place.latitude, place.longitude)} onClick={() => onSelect(place)} aria-label={`${place.name}, ${categoryOf(place.category).label}`} aria-pressed={active} title={place.name}>
+            <span><Icon size={active ? 18 : 15} /></span>{place.sponsored && <i className="pin-sponsored" aria-hidden="true"></i>}
+          </button>
+        ); })}
+        {located && <div className="user-location-pin" style={me}><span></span></div>}
+      </div>
+      <div className="map-controls">
+        <button className={located ? "map-ctrl active" : "map-ctrl"} onClick={useLocation} aria-label="Use my location" title="Use my location"><LocateFixed size={18} /></button>
+        <div className="map-zoom"><button className="map-ctrl" onClick={() => setZoomIndex((i) => Math.min(ZOOMS.length - 1, i + 1))} disabled={zoomIndex === ZOOMS.length - 1} aria-label="Zoom in"><Plus size={18} /></button><button className="map-ctrl" onClick={() => setZoomIndex((i) => Math.max(0, i - 1))} disabled={zoomIndex === 0} aria-label="Zoom out"><Minus size={18} /></button></div>
+      </div>
+      <div className="map-attribution">Mock map · Tiles © <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a> — Esri, HERE, Garmin, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors</div>
       {showPopup && selected && <div className="map-popup place-popup">
         <img loading="lazy" src={selected.image} alt="" />
         <div>
-          <div className="place-badges">{selected.sponsored && <span className="sponsored-tag">Sponsored</span>}<span className="place-category" style={{ color: categoryColor(selected.category) }}>{selected.category}</span></div>
+          <div className="place-badges">{selected.sponsored && <span className="sponsored-tag">Sponsored</span>}<span className="place-category">{categoryOf(selected.category).label}</span></div>
           <h3>{selected.name}</h3><p>{selected.address}</p>
           <div className="place-rating"><Star size={13} fill="currentColor" /> <strong>{average(selected).toFixed(1)}</strong> <span>({selected.reviews.length} review{selected.reviews.length === 1 ? "" : "s"})</span></div>
           <div className="place-hours"><i></i>{selected.hours}</div>
@@ -49,6 +121,17 @@ export function MapCanvas({ places, selected, onSelect, onDetails, showPopup = t
     </div>
   );
 }
+
+// "today", "yesterday", "5 days ago", then a date like "Aug 27, 2026"
+const daysSince = (iso: string) => Math.round((new Date(isoDay(0)).getTime() - new Date(iso.slice(0, 10)).getTime()) / 86400000);
+const STALE_DAYS = 180; // older than ~6 months → show the "may be out of date" note
+const updatedLabel = (iso: string) => {
+  const days = daysSince(iso);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 14) return `${days} days ago`;
+  return new Date(`${iso.slice(0, 10)}T12:00`).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+};
 
 function PlaceDetail({ place, back }: { place: Place; back: () => void }) {
   const { authenticated, requireAuth, addPlaceReview, toggleReviewLike, likedReviews, notify } = useStore();
@@ -78,12 +161,12 @@ function PlaceDetail({ place, back }: { place: Place; back: () => void }) {
               <p className="place-address"><MapPin size={15} /> {place.address}</p>
             </div>
             <div className="post-menu-wrap">
-              <p className="post-date">Last updated 2 hours ago</p>
               {/* <button className="post-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Place actions"><MoreVertical size={18} /></button> */}
               {/* {menuOpen && <div className="post-menu"><button onClick={() => { setMenuOpen(false); if (requireAuth()) setReporting(true); }}><Flag size={14} /> Report this place</button></div>} */}
             </div>
           </div>
-          <div className="place-meta"><span><Star size={15} fill="currentColor" /> <strong>{avg.toFixed(1)}</strong> ({place.reviews.length} reviews)</span><span><Clock size={15} /> {place.hours}</span></div>
+          <div className="place-meta"><span><Star size={15} fill="currentColor" /> <strong>{avg.toFixed(1)}</strong> ({place.reviews.length} reviews)</span><span><Clock size={15} /> {place.hours}</span><span className="place-updated"><History size={15} /> Updated {updatedLabel(place.updatedAt)}</span></div>
+          {daysSince(place.updatedAt) > STALE_DAYS && <div className="place-stale-note" role="note"><AlertTriangle size={16} /><span>Info may be out of date. Hours or dog rules could have changed.</span><button onClick={() => { if (requireAuth()) setReporting(true); }}>Report incorrect info</button></div>}
           <p className="long-description">{place.description}</p>
 
           <section className="place-reviews">
@@ -132,30 +215,33 @@ export default function MapPage() {
   const { places, focus } = useStore();
   const visible = places.filter((p) => !p.hidden);
   const [category, setCategory] = useState<"All" | SpotCategory>("All");
+  const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(focus?.placeId || visible[0]?.id);
   const [detailId, setDetailId] = useState<number | null>(focus?.placeId ?? null);
-  const filtered = category === "All" ? visible : visible.filter((p) => p.category === category);
+  const q = query.trim().toLowerCase();
+  const filtered = visible.filter((p) => (category === "All" || p.category === category) && (!q || `${p.name} ${p.address} ${categoryOf(p.category).label}`.toLowerCase().includes(q)));
   const selected = filtered.find((p) => p.id === selectedId) || filtered[0];
   const detail = visible.find((p) => p.id === detailId);
   if (detail) return <PlaceDetail place={detail} back={() => setDetailId(null)} />;
-  const chooseCategory = (name: "All" | SpotCategory) => { setCategory(name); const first = name === "All" ? visible[0] : visible.find((p) => p.category === name); if (first) setSelectedId(first.id); };
+  const chooseCategory = (name: "All" | SpotCategory) => { setCategory(name); const first = visible.find((p) => name === "All" || p.category === name); if (first) setSelectedId(first.id); };
   const openDetails = (place: Place) => { setDetailId(place.id); window.scrollTo({ top: 0 }); };
   return (
     <section className="map-page">
       <div className="map-list-panel">
         <div className="map-list-header">
-          <span className="eyebrow">Pet-friendly Vancouver</span><h1>Places for every adventure</h1><p>Select a category or a place to locate it on the map.</p>
-          <div className="map-category-list">
-            <button className={category === "All" ? "active" : ""} onClick={() => chooseCategory("All")}><Compass size={16} /><span>All places</span><strong>{visible.length}</strong></button>
-            {mapCategories.map((item) => { const Icon = item.icon; return <button className={category === item.name ? "active" : ""} key={item.name} onClick={() => chooseCategory(item.name)}><span className="category-dot" style={{ background: item.color }}><Icon size={14} /></span><span>{item.name}</span><strong>{visible.filter((p) => p.category === item.name).length}</strong></button>; })}
+          <h1>Pet-friendly map</h1>
+          <label className="search-field map-search"><Search size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search places" aria-label="Search places" />{query && <button className="map-search-clear" onClick={() => setQuery("")} aria-label="Clear search"><X size={15} /></button>}</label>
+          <div className="map-category-list" role="tablist" aria-label="Categories">
+            <button role="tab" aria-selected={category === "All"} className={category === "All" ? "active" : ""} onClick={() => chooseCategory("All")}>All</button>
+            {mapCategories.map((c) => <button role="tab" aria-selected={category === c.name} key={c.name} className={category === c.name ? "active" : ""} onClick={() => chooseCategory(c.name)}>{c.label}</button>)}
           </div>
         </div>
         <div className="map-place-list">
-          {filtered.length ? filtered.map((spot) => <div className={selected?.id === spot.id ? "map-place-card selected" : "map-place-card"} key={spot.id} onClick={() => setSelectedId(spot.id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") setSelectedId(spot.id); }}>
+          {filtered.length ? filtered.map((spot) => <div className={selected?.id === spot.id ? "map-place-card selected" : "map-place-card"} key={spot.id} onClick={() => setSelectedId(spot.id)} role="button" tabIndex={0} aria-pressed={selected?.id === spot.id} onKeyDown={(event) => { if (event.key === "Enter") setSelectedId(spot.id); }}>
             <img loading="lazy" src={spot.image} alt="" />
-            <div><span className="place-category" style={{ color: categoryColor(spot.category) }}>{spot.category}</span><h3>{spot.name}</h3><p>{spot.address}</p><span className="place-rating small"><Star size={11} fill="currentColor" /> {average(spot).toFixed(1)} · {spot.reviews.length} reviews</span></div>
+            <div><h3>{spot.name}{spot.sponsored && <span className="sponsored-dot" title="Sponsored" aria-label="Sponsored"></span>}</h3><p className="place-meta-line">{categoryOf(spot.category).label} · <Star size={11} fill="currentColor" /> {average(spot).toFixed(1)} · {spot.address.split(",")[0]}</p></div>
             <button className="icon-button" onClick={(event) => { event.stopPropagation(); openDetails(spot); }} aria-label={`Open ${spot.name} details`}><ChevronRight size={18} /></button>
-          </div>) : <p className="muted map-empty">No places in this category yet.</p>}
+          </div>) : <div className="map-empty"><MapPin size={20} /><strong>No places found</strong><span>{q ? `Nothing matches “${query}”.` : "No places in this category yet."} Try another category or search.</span></div>}
         </div>
       </div>
       <MapCanvas places={filtered} selected={selected} onSelect={(p) => setSelectedId(p.id)} onDetails={openDetails} />

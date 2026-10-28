@@ -3,7 +3,7 @@ import {
   ArrowLeft, ArrowRight, Beer, BellRing, CalendarDays, Check, Clock, Coffee, Compass, Dog, Edit3, Eye, EyeOff, FileText, Flag, Heart,
   HeartPulse, Hotel, LayoutDashboard, LockKeyhole, LogOut, MapPin, Menu, MessageCircle, Mountain, Plus, Search, ShieldCheck, Store, Trash2, Trees, UserRound, UsersRound,
 } from "lucide-react";
-import { photos, Place, Report, SpotCategory } from "./data";
+import { isoDay, photos, Place, Report, SpotCategory } from "./data";
 import { MapCanvas, mapCategories } from "./MapPage";
 import { useStore } from "./store";
 import { Avatar, Badge, Brand, Modal } from "./ui";
@@ -130,7 +130,7 @@ function SpotForm({ existing, onClose }: { existing: Place | "new"; onClose: () 
   const [error, setError] = useState("");
   const save = () => {
     if (!name.trim() || !address.trim()) return setError("Spot name and address are required.");
-    savePlace(base ? { ...base, name: name.trim(), category, address: address.trim(), image: image || base.image } : { id: Date.now(), name: name.trim(), category, address: address.trim(), image: image || photos.spot1, x: 30 + Math.round(Math.random() * 40), y: 25 + Math.round(Math.random() * 45), rating: 0, hours: "Hours not listed", description: "Newly added pet-friendly place.", reviews: [] });
+    savePlace(base ? { ...base, updatedAt: isoDay(0), name: name.trim(), category, address: address.trim(), image: image || base.image } : { id: Date.now(), name: name.trim(), category, address: address.trim(), image: image || photos.spot1, updatedAt: isoDay(0), latitude: 49.262 + Math.random() * 0.024, longitude: -123.17 + Math.random() * 0.09, /* mock: a real build geocodes the address */ rating: 0, hours: "Hours not listed", description: "Newly added pet-friendly place.", reviews: [] });
     notify(base ? "Spot updated." : "Spot added to the map.");
     onClose();
   };

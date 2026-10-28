@@ -66,7 +66,7 @@ Maya starts **Not verified**. To see the verified badge appear:
 | `--coral` (+ `-soft`, `-line`) | `#B84536` | Errors, destructive actions, lost pets |
 
 Each soft accent has an `-ink` partner for its text; all of these pairs pass WCAG AA.
-Map category colours live in `mapCategories` (`src/MapPage.tsx`) and all keep at least 3:1 against white.
+Map categories (icon + short label) live in `mapCategories` (`src/MapPage.tsx`). All map pins use the brand greens; see the Map spec below.
 
 - **Fonts:** Plus Jakarta Sans (`--display`) for headings; Inter 400–700 for all interface text.
 - **Layout:** a social-app shell.
@@ -159,12 +159,55 @@ From FLOWS §20, plus gaps found in this review:
    - soft-delete (Hide) vs. hard-delete with confirmation
    - an admin audit log
 8. **Uploads:** image/PDF validation, resizing, and malware scanning.
-9. **Map:** a real map provider (Mapbox/Google/Leaflet), geocoding, and geolocation consent. Swap the drawn map in `MapCanvas`.
+9. **Map:** a real map provider, geocoding, and geolocation consent. Replace the mock inside `MapCanvas`; see the Map spec below.
 10. **Notifications:** an in-app feed, plus email/push as set in Account settings.
 11. **Accessibility:**
     - Escape closes dialogs and the page behind them stops scrolling.
     - Still needed: focus trapping inside dialogs, ARIA tab roles on tab bars, and a keyboard pass on the map.
 12. **Images:** the photos are Unsplash hot-links. Replace them with licensed or owned images served from your CDN.
+
+---
+
+## Map spec (for the real map build)
+
+The map in the prototype is a **visual mock-up**. It shows real Vancouver streets so the design looks right, but it isn't a map library: it places fixed map pictures (Esri "Light Gray Canvas" tiles, zoom 13, no API key) and works out pin positions itself. **Don't ship it.** Esri tiles in production need an ArcGIS account and their terms. Pick a licensed provider (e.g. Mapbox, MapTiler, Google Maps) and style it to match: light grey land, soft labels, muted water.
+
+### What to swap
+
+- Everything lives in **one component: `MapCanvas`** (`src/MapPage.tsx`). Replace its inside and keep its props, so the rest of the app doesn't change:
+
+| Prop | Meaning |
+|---|---|
+| `places` | The places to show as pins (already filtered by category and search) |
+| `selected` | The selected place, or none |
+| `onSelect(place)` | Called when a pin is tapped |
+| `onDetails(place)` | Called by "View place details" in the popup |
+| `showPopup` | `true` on the map page; `false` for the small map on a place's detail page (no popup, no controls) |
+
+- Places carry `latitude` / `longitude` and `updatedAt` (`Place` in `src/data.ts`). `updatedAt` is set when an admin saves the spot and shows on place details as "Last updated today / yesterday / N days ago", then a date after two weeks. New reviews don't change it. When `updatedAt` is over 180 days old, place details shows a butter-yellow "Info may be out of date" note with a "Report incorrect info" link (opens the same place report). Admin "Add spot" currently makes up a random position; the real build geocodes the address.
+
+### Behaviour to keep
+
+| Part | Design |
+|---|---|
+| **First view** | Fit all visible places on screen (`fitBounds` with padding) |
+| **Pin** | Teardrop, 34px, `--olive-deep` (#568203), white border, white category icon |
+| **Selected pin** | 46px, `--olive-dark` (#354F05), on top of the others |
+| **Sponsored pin** | Small butter (`--butter`) dot on the pin's top-right |
+| **Tap a pin** | Selects the place, map glides to centre it, popup opens, list row highlights |
+| **Tap a list row** | Same as tapping its pin. The row's chevron (›) opens place details |
+| **Popup** | Desktop: photo, category, name, address, rating, hours, "View place details". Phone: a compact strip (photo, name, rating, link) so the map stays visible |
+| **Category chips** | One scrolling row: All, Parks, Cafés, Pubs, Shops, Pet services, Stays, Trails. Filters pins and the list together |
+| **Search** | Filters by name and address; a clear (×) button; "No places found" empty state |
+| **Controls** (top right) | Use my location (shows a blue dot, `#3B7DB5`; ask for location permission first), zoom + / − |
+| **Attribution** | Always visible at the bottom; use the provider's required text |
+| **Drag** | Pan by drag or touch |
+
+### Layout
+
+- **Desktop:** list panel on the left (title, search, chips, place rows), map fills the right.
+- **Phone (900px and below):** map on top, list below.
+- **Later (not in the prototype):** on phones, a swipeable card carousel over the bottom of the map; swiping a card selects that place and moves the map to it. Build this with the real map.
 
 ---
 
