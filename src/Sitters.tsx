@@ -3,7 +3,7 @@ import {
   Activity, ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, CircleCheckBig, Clock, Flag, Heart, MapPin,
   MessageCircle, Plus, Search, ShieldCheck, Smile, Frown, Star, Trash2, UsersRound, X,
 } from "lucide-react";
-import { Applicant, dateParts, findPerson, firstName, ME, myPets, SitterRequest } from "./data";
+import { Applicant, dateParts, findPerson, firstName, ME, petAge, SitterRequest } from "./data";
 import { useStore } from "./store";
 import { Badge, EmptyState, Modal, PersonAvatar, ReportModal, StarRating } from "./ui";
 
@@ -28,6 +28,11 @@ function StatusNote({ tone, icon, title, text, action }: { tone: "blue" | "green
   return <div className={`status-note ${tone}`}><span>{icon}</span><div><strong>{title}</strong><small>{text}</small></div>{action}</div>;
 }
 
+/** Small "Vaccinated / Not vaccinated yet" tag so sitters can see it at a glance. */
+function VaxTag({ vaccinated }: { vaccinated: boolean }) {
+  return <span className={vaccinated ? "vax-tag yes" : "vax-tag no"}><ShieldCheck size={12} /> {vaccinated ? "Vaccinated" : "Not vaccinated yet"}</span>;
+}
+
 // ---------- Modals ----------
 
 function ApplyModal({ request, onClose }: { request: SitterRequest; onClose: () => void }) {
@@ -38,6 +43,7 @@ function ApplyModal({ request, onClose }: { request: SitterRequest; onClose: () 
     <Modal onClose={onClose}>
       <span className="eyebrow">Pet sitting request</span>
       <h2>Apply to sit {request.pet}</h2>
+      {request.vaccinated !== undefined && <p className={request.vaccinated ? "vax-note yes" : "vax-note no"}><ShieldCheck size={15} /> {request.vaccinated ? `${request.pet} is vaccinated.` : `${request.pet} is not vaccinated yet. Ask the owner in Messages if that matters for your own pets.`}</p>}
       <label className="composer-text"><span>Message to the owner</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={`Hi! I’d love to look after ${request.pet} because...`} /></label>
       <div className="confirm-block"><span>Please confirm</span><label><input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} /> <span>I’m available <strong>{request.date} from {request.time}</strong> and can arrive in {request.area} on time.</span></label></div>
       <button className="primary-button full" disabled={!note.trim() || !available} onClick={() => { apply(request.id, note.trim()); addNotice({ text: `Your application for ${request.pet} was sent to ${firstName(request.owner)}.`, page: "sitters", icon: "applicant" }); notify("Application sent. Track it under Applied."); onClose(); }}>Submit application</button>
@@ -119,6 +125,7 @@ function RequestCard({ request, tab, open }: { request: SitterRequest; tab: Tab;
         <div className="request-card-top">{label}<span>{request.posted}</span></div>
         <h3>{request.title}</h3>
         <p className="pet-line"><strong>{request.pet}</strong> · {request.breed} · Posted by {request.owner === ME ? "you" : request.owner}</p>
+        {request.vaccinated !== undefined && <VaxTag vaccinated={request.vaccinated} />}
         {tab === "applied" && <p className="request-intro">{request.description.slice(0, 110)}…</p>}
         <Facts request={request} />
 
@@ -168,7 +175,8 @@ function ApplicantCard({ applicant, request, selected, dimmed, onSelect, onChoos
 }
 
 function RequestDetail({ request, back, scrollToApplicants, goToBoard }: { request: SitterRequest; back: () => void; scrollToApplicants: boolean; goToBoard: (tab: Tab, status: string) => void }) {
-  const { authenticated, requireAuth, verification, applications, withdraw, openProfile, openConversation, matchSitter, setPage, notify, addNotice } = useStore();
+  const { authenticated, requireAuth, verification, applications, withdraw, openProfile, openConversation, matchSitter, setPage, notify, addNotice, pets } = useStore();
+  const petProfile = pets.find((p) => p.id === request.petId); // joined live, like SitterRequest.petId → Pet
   const [applyOpen, setApplyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -245,7 +253,13 @@ function RequestDetail({ request, back, scrollToApplicants, goToBoard }: { reque
 
         <aside className="request-detail-aside">
           <div className="pet-summary"><img loading="lazy" src={request.image} alt="" /><div><span>Meet</span><h2>{request.pet}</h2><p>{request.petType}</p></div></div>
-          <dl><div><dt>Breed</dt><dd>{request.breed}</dd></div><div><dt>Age</dt><dd>{request.age}</dd></div><div><dt>Weight</dt><dd>{request.weight}</dd></div><div><dt>Applicants</dt><dd>{request.applicants.length} neighbour{request.applicants.length === 1 ? "" : "s"}</dd></div></dl>
+          <dl><div><dt>Breed</dt><dd>{request.breed}</dd></div><div><dt>Age</dt><dd>{request.age}</dd></div><div><dt>Weight</dt><dd>{request.weight}</dd></div>{request.vaccinated !== undefined && <div><dt>Vaccinated</dt><dd><VaxTag vaccinated={request.vaccinated} /></dd></div>}<div><dt>Applicants</dt><dd>{request.applicants.length} neighbour{request.applicants.length === 1 ? "" : "s"}</dd></div></dl>
+          <div className="about-pet">
+            <h3>About {request.pet}</h3>
+            {petProfile && <p className="about-pet-facts">{petProfile.gender}{petProfile.isNeutered ? ` · ${petProfile.gender === "Female" ? "Spayed" : "Neutered"}` : ""}</p>}
+            {petProfile?.notes ? <p>{petProfile.notes}</p> : <p className="muted">{mine ? "You haven’t added care notes yet." : `${firstName(request.owner)} hasn’t added care notes yet.`}</p>}
+            {mine && <button className="text-button" onClick={() => setPage("pets")}>{petProfile?.notes ? "Edit care notes in My pets" : "Add care notes in My pets"}</button>}
+          </div>
           <button className="owner-line owner-profile-link" onClick={() => openProfile(request.owner)}><PersonAvatar name={request.owner} size="sm" /><div><span>Posted by</span><strong>{mine ? `${request.owner} (you)` : request.owner}</strong></div><ChevronRight size={18} /></button>
           {action}
         </aside>
@@ -277,8 +291,9 @@ function RequestDetail({ request, back, scrollToApplicants, goToBoard }: { reque
 
 /** "Request a sitter" form, shown in a modal over the sitter board. */
 function CreateRequestModal({ onClose, viewMine }: { onClose: () => void; viewMine: (id: string) => void }) {
-  const { addRequest, notify } = useStore();
-  const [petName, setPetName] = useState(myPets[0].name);
+  const { addRequest, notify, pets: allPets } = useStore();
+  const pets = allPets.filter((p) => p.owner === ME);
+  const [petId, setPetId] = useState(pets[0]?.id || "");
   const [form, setForm] = useState({ date: "", start: "", end: "", duration: "1–2 hours", location: "", title: "", description: "" });
   const [error, setError] = useState("");
   const [createdId, setCreatedId] = useState("");
@@ -286,9 +301,10 @@ function CreateRequestModal({ onClose, viewMine }: { onClose: () => void; viewMi
   const fmtTime = (value: string) => { if (!value) return ""; const [h, m] = value.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
   const submit = () => {
     if (!form.date || !form.start || !form.end || !form.location.trim() || !form.title.trim() || !form.description.trim()) return setError("Please fill in the date, times, location, title, and care description.");
-    const pet = myPets.find((p) => p.name === petName)!;
+    const pet = pets.find((p) => p.id === petId);
+    if (!pet) return setError("Add a pet in My pets first, then choose it here.");
     const id = `SR-${Date.now().toString().slice(-4)}`;
-    addRequest({ id, owner: ME, pet: pet.name, petType: pet.type, breed: pet.breed, age: pet.age, weight: pet.weight, image: pet.image, title: form.title.trim(), area: form.location.trim(), date: new Date(`${form.date}T12:00`).toLocaleDateString("en-CA", { month: "long", day: "numeric" }), posted: "Just now", time: `${fmtTime(form.start)} – ${fmtTime(form.end)}`, duration: form.duration, description: form.description.trim(), status: "Open", applicants: [] });
+    addRequest({ id, owner: ME, petId: pet.id, pet: pet.name, petType: pet.species === "dog" ? "Dog" : "Cat", breed: pet.breed || (pet.species === "dog" ? "Dog" : "Cat"), age: petAge(pet.birthDate), vaccinated: pet.isVaccinated, weight: `${pet.weight} kg`, image: pet.imageUrl, title: form.title.trim(), area: form.location.trim(), date: new Date(`${form.date}T12:00`).toLocaleDateString("en-CA", { month: "long", day: "numeric" }), posted: "Just now", time: `${fmtTime(form.start)} – ${fmtTime(form.end)}`, duration: form.duration, description: form.description.trim(), status: "Open", applicants: [] });
     notify("Your sitter request is live.");
     setCreatedId(id);
   };
@@ -309,7 +325,7 @@ function CreateRequestModal({ onClose, viewMine }: { onClose: () => void; viewMi
       <h2>Who can we care for?</h2>
       <p className="modal-lead">Share your pet’s routine and exactly what kind of help you need.</p>
       <div className="request-form-card in-modal">
-        <fieldset><legend>1. Choose your pet</legend><div className="pet-choice">{myPets.map((pet) => <button key={pet.name} className={petName === pet.name ? "active" : ""} onClick={() => setPetName(pet.name)}><img loading="lazy" src={pet.image} alt="" /><span><strong>{pet.name}</strong><small>{pet.breed} · {pet.age}</small></span>{petName === pet.name && <Check size={18} />}</button>)}</div></fieldset>
+        <fieldset><legend>1. Choose your pet</legend><div className="pet-choice">{pets.map((pet) => <button key={pet.id} className={petId === pet.id ? "active" : ""} onClick={() => setPetId(pet.id)}><img loading="lazy" src={pet.imageUrl} alt="" /><span><strong>{pet.name}</strong><small>{pet.breed} · {petAge(pet.birthDate)} · {pet.isVaccinated ? "Vaccinated" : "Not vaccinated yet"}</small></span>{petId === pet.id && <Check size={18} />}</button>)}</div></fieldset>
         <fieldset><legend>2. Date and time</legend><div className="form-grid"><label>Date<input type="date" value={form.date} onChange={set("date")} /></label><label>Duration<select value={form.duration} onChange={set("duration")}><option>Under 1 hour</option><option>1–2 hours</option><option>Half day</option><option>Full day</option><option>Overnight</option></select></label><label>Start time<input type="time" value={form.start} onChange={set("start")} /></label><label>End time<input type="time" value={form.end} onChange={set("end")} /></label></div></fieldset>
         <fieldset><legend>3. Care details</legend><div className="form-grid"><label className="full-field">Location<input value={form.location} onChange={set("location")} placeholder="Neighbourhood, e.g. Kitsilano" /></label><label className="full-field">Title<input value={form.title} onChange={set("title")} placeholder="A clear title for your request" /></label><label className="full-field">Description<textarea value={form.description} onChange={set("description")} placeholder="Care instructions, routines, medication, and what you would like the sitter to do..." /></label></div></fieldset>
       </div>

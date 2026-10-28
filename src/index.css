@@ -24,7 +24,7 @@
   --brown-2: #5C4A39;
   --muted: #7A6857;              /* secondary text, AA on cream and white */
   --beige: #C9B79C;              /* warm neutral for hover borders */
-  --ivory: #FAF8F0;              /* Warm Cream: page background */
+  --ivory: #FAF8F0;              /* FAF8F0 ---Warm Cream: page background */
   --cream: #F3EFE2;              /* soft surfaces: tab tracks, chips */
   --white: #FFFFFF;
   --line: #ECE6D8;
@@ -599,6 +599,12 @@ footer > p { color: var(--muted); font-size: 12px; }
 .request-detail-aside dl > div:last-child { border-bottom: 0; }
 .request-detail-aside dt { color: var(--muted); }
 .request-detail-aside dd { margin: 0; font-weight: 600; text-align: right; }
+.about-pet { display: grid; gap: 6px; margin: 4px 0 16px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--sage-faint); border: 1px solid var(--sage-soft); }
+.about-pet h3 { font-size: 15px; }
+.about-pet p { font-size: 14px; line-height: 1.6; color: var(--brown-2); }
+.about-pet .about-pet-facts { font-size: 12px; font-weight: 600; color: var(--olive-dark); }
+.about-pet .muted { font-size: 13px; }
+.about-pet .text-button { justify-self: start; font-size: 13px; }
 .owner-line { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--ivory); text-align: left; transition: border-color .15s, background-color .15s; }
 .owner-line:hover { border-color: var(--line-strong); background: var(--cream); }
 .owner-line > div { flex: 1; min-width: 0; }
@@ -982,7 +988,7 @@ footer > p { color: var(--muted); font-size: 12px; }
 .workspace-pet-list button { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid transparent; border-radius: var(--r-lg); background: none; text-align: left; transition: background-color .15s, border-color .15s; }
 .workspace-pet-list button:hover { background: var(--ivory); }
 .workspace-pet-list button.active { background: var(--sage-faint); border-color: var(--sage); }
-.workspace-pet-list img { width: 48px; height: 48px; border-radius: var(--r-md); object-fit: cover; }
+.workspace-pet-list img, .workspace-pet-list .pet-photo-fallback { width: 48px; height: 48px; border-radius: var(--r-md); object-fit: cover; flex: 0 0 auto; }
 .workspace-pet-list span { flex: 1; }
 .workspace-pet-list strong, .workspace-pet-list small { display: block; }
 .workspace-pet-list strong { font-size: 15px; font-weight: 600; }
@@ -992,7 +998,10 @@ footer > p { color: var(--muted); font-size: 12px; }
 .add-pet-dashed:hover { border-color: var(--olive); background: var(--sage-faint); }
 .pet-workspace-main { display: grid; gap: 22px; min-width: 0; }
 .pet-feature-card { position: relative; display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center; padding: 16px; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--shadow-xs); }
-.pet-feature-card > img { width: 200px; height: 200px; object-fit: cover; border-radius: var(--r-lg); }
+.pet-feature-card > img, .pet-feature-card > .pet-photo-fallback { width: 200px; height: 200px; object-fit: cover; border-radius: var(--r-lg); }
+.pet-photo-fallback { display: grid; place-items: center; background: var(--sage-soft); color: var(--olive-dark); }
+.pet-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pet-chips span { padding: 3px 10px; border-radius: var(--r-pill); background: var(--sage-soft); color: var(--olive-dark); font-size: 12px; font-weight: 600; }
 .pet-feature-name { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .pet-feature-name h2 { font-size: 28px; }
 .pet-feature-card > div > p { color: var(--muted); font-size: 14px; margin-top: 6px; }
@@ -1000,16 +1009,21 @@ footer > p { color: var(--muted); font-size: 12px; }
 .pet-edit-button { position: absolute; top: 16px; right: 16px; min-height: 36px !important; padding: 0 12px !important; font-size: 13px !important; }
 .pet-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .pet-section-heading h2 { font-size: 22px; margin-top: 4px; }
-.health-range-button { min-height: 38px !important; font-size: 13px !important; }
+.health-range-label { color: var(--muted); font-size: 13px; }
+.health-empty { color: var(--muted); font-size: 14px; padding: 6px 0 2px; }
 .health-dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .health-card { padding: 20px; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--shadow-xs); }
 .poop-chart-card { grid-column: span 2; }
 .health-card-title { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-.health-card-title > div { flex: 1; }
+.health-card-title > div:not(.health-card-actions) { flex: 1; min-width: 0; }
 .health-card-title h3 { font-size: 16px; }
 .health-card-title p { color: var(--muted); font-size: 13px; }
-.health-card-title > button { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--olive-dark); font-size: 13px; font-weight: 600; padding: 4px 0; }
-.health-card-title > button svg { width: 15px; height: 15px; }
+.health-card-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.health-card-actions > button:last-child { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; padding: 4px 0; color: var(--olive-dark); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.health-card-actions > button:last-child:hover { color: var(--olive); }
+.health-card-actions > button:last-child svg { width: 15px; height: 15px; }
+.card-add { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--white); color: var(--olive-deep); transition: background-color .15s, border-color .15s; }
+.card-add:hover { background: var(--sage-soft); border-color: var(--sage); }
 .health-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--r-md); background: var(--sage-soft); color: var(--olive-dark); }
 .health-icon svg { width: 19px; height: 19px; }
 .health-icon.orange, .health-icon.purple { background: var(--cream); color: var(--amber-text); }
@@ -1038,7 +1052,10 @@ footer > p { color: var(--muted); font-size: 12px; }
 .weight-line i { width: 10px; height: 10px; border-radius: 50%; background: var(--olive); box-shadow: 0 0 0 4px var(--sage-soft); }
 .weight-line i:nth-child(1) { margin-bottom: 14px; } .weight-line i:nth-child(2) { margin-bottom: 26px; } .weight-line i:nth-child(3) { margin-bottom: 22px; } .weight-line i:nth-child(4) { margin-bottom: 34px; } .weight-line i:nth-child(5) { margin-bottom: 30px; }
 .health-note { color: var(--muted); font-size: 13px; }
+.emergency-list { display: grid; gap: 14px; }
+.emergency-list > .emergency-details + .emergency-details { padding-top: 14px; border-top: 1px solid var(--line); }
 .emergency-details { display: grid; gap: 4px; }
+.emergency-details > a.secondary-button { justify-self: start; margin-top: 8px; }
 .emergency-details strong { font-size: 16px; font-weight: 600; }
 .emergency-details a { color: var(--olive-dark); font-weight: 600; font-size: 15px; }
 .emergency-details span { color: var(--muted); font-size: 14px; }
@@ -1051,6 +1068,54 @@ footer > p { color: var(--muted); font-size: 12px; }
 .walk-bars small { color: var(--muted); font-size: 12px; }
 .walk-summary { display: flex; gap: 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 .walk-summary strong { color: var(--brown); font-weight: 600; font-size: 15px; }
+.walk-warning { color: var(--coral); margin-left: auto; }
+.record-list em.status-upcoming { color: var(--butter-ink); }
+.record-list em.status-done { color: var(--success); }
+
+/* Vaccination status: success green when vaccinated, butter (gentle caution) when not yet */
+.vax-tag { display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 8px; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; }
+.vax-tag.yes, .pet-chips span.vax.yes { background: var(--success-soft); color: var(--success); }
+.vax-tag.no, .pet-chips span.vax.no { background: var(--butter-soft); color: var(--butter-ink); }
+.request-detail-aside dd .vax-tag { margin-top: 0; }
+.vax-note { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 12px; padding: 10px 12px; border-radius: var(--r-md); font-size: 13px; line-height: 1.5; }
+.vax-note svg { flex: 0 0 auto; margin-top: 2px; }
+.vax-note.yes { background: var(--success-soft); color: var(--success); }
+.vax-note.no { background: var(--butter-soft); color: var(--butter-ink); }
+.vax-field { display: grid; gap: 7px; }
+.vax-field-label { font-size: 13px; font-weight: 600; color: var(--brown); }
+.field-hint { color: var(--muted); font-size: 12px; font-weight: 400; }
+
+/* My Pets: log editor and pet form */
+.log-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.log-modal-head h2 { margin: 4px 0 0; }
+.log-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: min(52vh, 460px); overflow-y: auto; }
+.log-row { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); transition: border-color .15s, background-color .15s; }
+.log-row:hover { border-color: var(--line-strong); }
+.log-row.confirming { border-color: var(--coral-line); background: var(--coral-soft); }
+.log-row-main { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.log-row-main strong { font-size: 15px; font-weight: 600; }
+.log-row-main span { color: var(--muted); font-size: 13px; }
+.log-row-main small { color: var(--brown-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-row-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.log-row-actions .icon-button { width: 34px; height: 34px; }
+.log-row-actions .icon-button.danger { color: var(--coral); }
+.log-row-actions .icon-button.danger:hover { background: var(--coral-soft); border-color: var(--coral-line); }
+.log-confirm-text { color: var(--coral); font-size: 13px; font-weight: 600; margin-right: 4px; }
+.log-form { margin-top: 18px; }
+.req { color: var(--coral); }
+.pet-form-top { display: grid; grid-template-columns: 132px 1fr; gap: 20px; align-items: start; margin: 18px 0 16px; }
+.pet-photo-field { position: relative; display: grid; justify-items: center; gap: 8px; cursor: pointer; }
+.pet-photo-field > img, .pet-photo-field > span { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; }
+.pet-photo-field > span { display: grid; place-items: center; background: var(--sage-soft); color: var(--olive-dark); border: 1.5px dashed var(--sage); }
+.pet-photo-field em { display: inline-flex; align-items: center; gap: 5px; font-style: normal; font-size: 13px; font-weight: 600; color: var(--olive-dark); }
+.pet-photo-field input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.pet-photo-field:hover > span, .pet-photo-field:hover > img { box-shadow: var(--ring); }
+.pet-form-basics { display: grid; gap: 12px; }
+.pet-form-basics > label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; }
+.segmented { display: inline-flex; gap: 4px; padding: 4px; width: fit-content; background: var(--cream); border-radius: var(--r-pill); }
+.segmented button { min-height: 34px; padding: 0 18px; border: 0; border-radius: var(--r-pill); background: none; color: var(--brown-2); font-size: 14px; font-weight: 600; transition: background-color .15s, color .15s, box-shadow .15s; }
+.segmented button.active { background: var(--white); color: var(--brown); box-shadow: var(--shadow-xs); }
+.form-grid > label.check-field { display: flex; align-items: center; gap: 10px; align-self: end; min-height: 44px; font-weight: 500; }
 
 /* =========================================================================
    Legal
@@ -1306,6 +1371,10 @@ tr.soft-deleted-row { opacity: .55; }
   .pet-feature-card { grid-template-columns: 1fr; }
   .pet-feature-card > img { width: 100%; height: 240px; }
   .health-dashboard-grid { grid-template-columns: 1fr; }
+  .pet-form-top { grid-template-columns: 1fr; justify-items: center; }
+  .pet-form-basics { width: 100%; }
+  .log-modal-head { flex-wrap: wrap; }
+  .pet-feature-card > .pet-photo-fallback { width: 100%; height: 200px; }
   .poop-chart-card { grid-column: auto; }
   .workspace-pet-list { grid-auto-flow: column; grid-auto-columns: 80%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .workspace-pet-list button { scroll-snap-align: start; border-color: var(--line); }

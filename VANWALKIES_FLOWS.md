@@ -385,6 +385,8 @@ Displays:
 - Full care instructions
 - Pet age
 - Pet weight
+- **About [pet]**: the pet’s gender, spayed/neutered, and care notes, read live from the pet profile (`SitterRequest.petId → Pet`). Owners write them once in My Pets instead of retyping them in every request. The owner sees a link to edit them in My Pets
+- Vaccination status (Vaccinated / Not vaccinated yet), also shown as a tag on request cards and in the Apply pop-up so sitters know before applying
 - Applicant count
 - Report action
 
@@ -589,97 +591,51 @@ Applicant sees completed sitting history and can review the owner using the futu
 
 ## 9. My Pets Flow
 
+Data follows the team ERD: `Pet` plus one table per log type (`PetToiletLog`, `PetFoodLog`, `PetWeightLog`, `PetVaccine`, `PetVetVisit`, `PetWalkLog`) and `EmergencyContact`.
+
 ## 9.1 Select a Pet
 
 1. User opens My Pets.
-2. Pet selector displays Sunny, Luna, and Add Another Pet.
-3. On mobile and tablet, pet cards swipe horizontally.
-4. User selects a pet.
-5. Selected pet details and dashboards update.
+2. The sidebar lists every pet plus **Add another pet**. On mobile the list swipes horizontally.
+3. Selecting a pet updates the profile card and every health card.
 
-## 9.2 Pet Summary
+## 9.2 Pet Profile
 
-Displays:
+Shows the photo, name, species / gender / spayed-or-neutered / vaccination chips, breed, age (worked out from the birthday), weight, last-updated date, and care notes, with **Edit profile**.
 
-- Large pet image
-- Name
-- Breed
-- Age
-- Weight
-- Last updated date
-- Health status
-- Natural-language description
-- Compact Edit Profile action
+## 9.3 Add Another Pet / Edit Profile
 
-## 9.3 Health Dashboards
-
-### Poop and Pee
-
-- Seven-day number chart
-- Daily poop count
-- Daily pee count
-- Log entry point
-
-### Food Log
-
-- Date or time
-- Menu
-- Amount given
-- Amount eaten
-- Scheduled meal
-
-### Weight
-
-- Current weight
-- Healthy range status
-- Weight trend
-- Target range
-- Last update
-
-### Vaccines
-
-- Vaccine name
-- Date
-- Clinic
-- Completed or upcoming status
-
-### Vet Visits
-
-- Date
-- Time
-- Visit reason or symptoms
-- Outcome
-
-### Emergency Contact
-
-- Clinic name
-- Phone number
-- Address
-- Call Clinic action
-
-### Walking
-
-Dog-only dashboard showing:
-
-- Day
-- Duration
-- Distance
-- Warning state
-- Walk log entry point
-
-## 9.4 Add Another Pet
-
-1. User swipes to Add Another Pet.
-2. User selects the action.
-3. Future production flow will collect:
-   - Dog or cat
-   - Photo
-   - Name
+1. User selects **Add another pet** (or **Edit profile** on the selected pet).
+2. A form opens (pre-filled when editing) with:
+   - Photo (optional)
+   - Species: Dog or Cat (required)
+   - Name (required)
    - Breed
-   - Age
-   - Weight
-   - Vaccination status
-   - Care notes
+   - Birthday (required, not in the future; an estimate is fine). The app stores the birthday and displays the age, so it stays correct every year
+   - Weight in kg (required, above 0)
+   - Gender: Female or Male
+   - Spayed / Neutered (label follows gender)
+   - Vaccinations: **Vaccinated** or **Not yet** (required, defaults to Not yet)
+   - Care notes for sitters (private until the owner posts a sitter request; then sitters on that request can read them)
+3. User selects **Add pet** / **Save changes**. Missing or invalid fields show an error.
+4. The new pet is selected and also becomes available in **Request a sitter**.
+5. Editing a pet also refreshes that pet’s existing sitter requests (vaccination, age, weight, photo).
+
+## 9.4 Health Logs
+
+Each card has **+** (add an entry) and **View log** (list every entry, newest first, with **Edit** and **Delete**; delete asks for confirmation).
+
+| Card | Fields (ERD) | Card shows |
+|---|---|---|
+| Poop & pee | type (Poop / Pee), loggedAt, notes | Count per day for the last 7 days |
+| Food log | foodName, amount, unit, eatenAt, notes | The 3 latest meals |
+| Weight | weight (kg), measuredOn | Latest weight, change since the previous weigh-in, trend of the last 6 |
+| Vaccines | vaccineName, administeredOn, nextDueOn, notes | **Upcoming** (next due date is today or later) first, then **Completed**. At least one date is required |
+| Vet visits | visitedOn, clinicName, reason, notes | The 2 latest visits |
+| Walking (dogs only) | startedAt, durationMinutes, distanceKm, notes | Minutes per day for the last 7 days, weekly total time and distance, days without a walk |
+| Emergency contacts | clinicName, phone, address, notes | Every contact with a tap-to-call link; a pet can have several |
+
+Every saved entry updates the pet’s “Updated” date.
 
 ---
 

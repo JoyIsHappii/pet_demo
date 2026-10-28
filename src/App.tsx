@@ -1,9 +1,8 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
-  Activity, ArrowLeft, ArrowRight, Award, BellRing, Camera, Cat, Check, ChevronDown, ChevronRight, CircleCheckBig, Clock, Dog, Edit3, Flag, Footprints,
-  HeartPulse, Home, LockKeyhole, LogOut, UserRound, Mail, MapPin, MessageCircle, MessagesSquare, PawPrint, Phone, Plus, Settings, ShieldCheck, Syringe, UserPlus, UsersRound, Utensils, Weight,
+  ArrowLeft, ArrowRight, Award, BellRing, Camera, Cat, Check, ChevronDown, CircleCheckBig, Clock, Dog, Edit3, Flag, Home, LockKeyhole, LogOut, UserRound, Mail, MapPin, MessageCircle, MessagesSquare, PawPrint, Settings, ShieldCheck, UserPlus, UsersRound,
 } from "lucide-react";
-import { findPerson, firstName, ME, Notice, photos, UserPage } from "./data";
+import { findPerson, firstName, ME, Notice, UserPage } from "./data";
 import { DEMO_MEMBER, StoreProvider, useStore } from "./store";
 import { Avatar, Badge, Brand, EmptyState, Modal, PersonAvatar, StarRating } from "./ui";
 import SideRail from "./Rail";
@@ -11,6 +10,7 @@ import CommunityPage, { PostCard } from "./Community";
 import SittersPage from "./Sitters";
 import MessagesPage from "./Messages";
 import MapPage from "./MapPage";
+import MyPetsPage from "./Pets";
 import { AdminApp, AdminLogin } from "./Admin";
 
 // ---------- Header ----------
@@ -128,7 +128,7 @@ function HomePage() {
   const petName = (pet: string) => pet.split(",")[0] || firstName(ME);
   return (
     <div className="page-section page-with-rail">
-      <div className="home-feed">
+      <div className="home-feed ">
         <section className="home-welcome">
           {authenticated
             ? <><h1>{greeting}, {firstName(ME)}</h1><p>Here’s what’s happening with pets around your neighbourhood.</p></>
@@ -401,33 +401,6 @@ function UserAuth() {
   </div>;
 }
 
-function MyPetsWorkspace() {
-  const [pet, setPet] = useState<"dog" | "cat">("cat");
-  const catImage = photos.cat3;
-  const current = pet === "dog"
-    ? { name: "Sunny", breed: "Golden Retriever", age: "4 years", weight: "29 kg", image: photos.dog1, description: "Playful, friendly, and happiest on long neighbourhood walks. Sunny loves people, gentle dogs, and a good game of fetch." }
-    : { name: "Luna", breed: "Domestic Shorthair", age: "3 years", weight: "4.6 kg", image: catImage, description: "Gentle and cuddly once she feels comfortable. Luna is an indoor cat who enjoys quiet company and short play sessions." };
-  return <section className="page-section pets-workspace-page">
-    <div className="pets-workspace-heading"><span className="eyebrow">Pet care workspace</span><h1>My pets</h1><p>Keep every detail a sitter needs in one place.</p></div>
-    <div className="pets-workspace">
-      <aside className="pet-workspace-sidebar"><span className="sidebar-label">Your pets</span><div className="pet-actions-row"><div className="workspace-pet-list"><button className={pet === "dog" ? "active" : ""} onClick={() => setPet("dog")}><img loading="lazy" src={photos.dog1} alt="" /><span><strong>Sunny</strong><small>Golden Retriever</small></span><ChevronRight size={20} /></button><button className={pet === "cat" ? "active" : ""} onClick={() => setPet("cat")}><img loading="lazy" src={catImage} alt="" /><span><strong>Luna</strong><small>Domestic Shorthair</small></span><ChevronRight size={20} /></button></div><button className="add-pet-dashed"><Plus size={17} /> Add another pet</button></div></aside>
-      <main className="pet-workspace-main">
-        <section className="pet-feature-card"><img loading="lazy" src={current.image} alt={current.name} /><div><div className="pet-feature-name"><h2>{current.name}</h2><Badge tone="green">Looking healthy</Badge></div><p>{current.breed} · {current.age} · {current.weight} · Last updated today</p><p className="pet-summary-description">{current.description}</p></div><button className="secondary-button pet-edit-button"><Edit3 size={15} /> Edit profile</button></section>
-        <div className="pet-section-heading health-heading"><div><span className="eyebrow">Health report</span><h2>Health & activity</h2></div><button className="secondary-button health-range-button">Last 7 days <ChevronDown size={16} /></button></div>
-        <div className="health-dashboard-grid">
-          <article className="health-card poop-chart-card"><div className="health-card-title"><span className="health-icon blue"><Activity /></span><div><h3>Poop & pee</h3><p>Daily count · Last 7 days</p></div><button>View log <ChevronRight /></button></div><div className="number-chart">{[["Mon",2,4],["Tue",2,3],["Wed",3,4],["Thu",2,4],["Fri",2,3],["Sat",3,4],["Sun",2,3]].map(([day, poop, pee]) => <div key={day}><span><i style={{ height: `${Number(poop) * 14}px` }}></i><b>{poop}</b></span><span><i style={{ height: `${Number(pee) * 10}px` }}></i><b>{pee}</b></span><small>{day}</small></div>)}</div><div className="chart-legend"><span><i className="poop"></i>Poop</span><span><i className="pee"></i>Pee</span></div></article>
-          <article className="health-card"><div className="health-card-title"><span className="health-icon orange"><Utensils /></span><div><h3>Food log</h3><p>Today</p></div><button>View log <ChevronRight /></button></div><div className="meal-list"><div><span>8:00 AM</span><strong>{pet === "dog" ? "Salmon kibble" : "Sensitive formula"}</strong><em>Full serving eaten</em></div><div><span>6:00 PM</span><strong>Evening meal</strong><em>Scheduled</em></div></div></article>
-          <article className="health-card"><div className="health-card-title"><span className="health-icon purple"><Weight /></span><div><h3>Weight</h3><p>Monthly trend</p></div><button>View log <ChevronRight /></button></div><div className="weight-summary"><strong>{pet === "dog" ? "29.0" : "4.6"} <small>kg</small></strong><Badge tone="green">Healthy range</Badge></div><div className="weight-line"><i></i><i></i><i></i><i></i><i></i></div><p className="health-note">Target range: {pet === "dog" ? "27–30 kg" : "4.2–4.8 kg"} · Updated May 21</p></article>
-          <article className="health-card"><div className="health-card-title"><span className="health-icon green"><Syringe /></span><div><h3>Vaccines</h3><p>Protection record</p></div><button>View all <ChevronRight /></button></div><div className="record-list"><div><span>Oct 14, 2025</span><strong>{pet === "dog" ? "DHPP booster" : "FVRCP booster"}</strong><em>Completed · Harbour Pet Clinic</em></div><div><span>Oct 14, 2026</span><strong>Annual booster</strong><em>Upcoming</em></div></div></article>
-          <article className="health-card"><div className="health-card-title"><span className="health-icon purple"><HeartPulse /></span><div><h3>Vet visits</h3><p>Recent appointments</p></div><button>View all <ChevronRight /></button></div><div className="record-list"><div><span>May 21 · 10:30 AM</span><strong>Annual wellness exam</strong><em>Routine checkup and weight review</em></div><div><span>Feb 8 · 2:15 PM</span><strong>{pet === "dog" ? "Itchy skin and paws" : "Reduced appetite"}</strong><em>Symptoms resolved</em></div></div></article>
-          <article className="health-card emergency-dashboard-card"><div className="health-card-title"><span className="health-icon red"><Phone /></span><div><h3>Emergency contact</h3><p>Primary clinic</p></div></div><div className="emergency-details"><strong>Harbour Pet Clinic</strong><a href="tel:+16045550188">+1 604 555 0188</a><span>1285 W Pender Street<br />Vancouver, BC V6E 2V2</span><a className="secondary-button" href="tel:+16045550188"><Phone size={15} /> Call clinic</a></div></article>
-          {pet === "dog" && <article className="health-card"><div className="health-card-title"><span className="health-icon green"><Footprints /></span><div><h3>Walking</h3><p>This week</p></div><button>View log <ChevronRight /></button></div><div className="walk-bars">{[32,45,28,58,42,64,22].map((height, i) => <div key={i}><i className={i === 6 ? "warning" : ""} style={{ height: `${height}px` }}></i><small>{["M","T","W","T","F","S","S"][i]}</small></div>)}</div><div className="walk-summary"><span><strong>4h 51m</strong> total</span><span><strong>22.4 km</strong> distance</span></div></article>}
-        </div>
-      </main>
-    </div>
-  </section>;
-}
-
 const legalContent = {
   terms: { eyebrow: "Community agreement", title: "Terms & Conditions", intro: "The rules that help Avancado remain a respectful, reliable community.", sections: [["Using Avancado", "Avancado helps neighbours connect around pet care and local community information. Members must provide accurate account information and use the service lawfully."], ["Community sitter requests", "Sitter Board posts coordinate voluntary community help. Avancado does not process pricing or payment and is not a party to arrangements between members."], ["Member responsibility", "Pet owners remain responsible for care instructions, emergency contacts, and choosing an appropriate helper. Sitters must follow the agreed care plan and communicate promptly."], ["Account action", "We may hide content, restrict features, or remove accounts when necessary to protect people, pets, or the community."]] },
   safety: { eyebrow: "Trust & care", title: "Safety Centre", intro: "Simple steps for safer conversations, meetups, and pet-care arrangements.", sections: [["Before you meet", "Review public profiles, verification status, experience, and community feedback. Arrange the first meeting in a public place when possible."], ["Protect your information", "Use Avancado messaging while getting to know another member. Only share the contact and home details required for confirmed care."], ["Plan pet care", "Discuss routines, behaviour, medication, emergency contacts, access instructions, and what to do if plans change."], ["Report a concern", "Use Report on a post or sitter request. Reports are private and reviewed by the moderation team. Contact emergency services when someone or a pet is in immediate danger."]] },
@@ -456,7 +429,7 @@ function UserApp() {
         {page === "sitters" && <SittersPage />}
         {page === "community" && <CommunityPage />}
         {page === "map" && <MapPage />}
-        {page === "pets" && <MyPetsWorkspace />}
+        {page === "pets" && <MyPetsPage />}
         {page === "profile" && <ProfilePage />}
         {page === "publicProfile" && <PublicProfilePage />}
         {page === "messages" && <MessagesPage />}

@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useState } from "react";
 import {
-  ME, nowTime, seedApplications, seedConversations, seedNotices, seedPlaces, seedPosts, seedReports, seedRequests,
+  ME, isoDay, nowTime, petAge, seedApplications, seedConversations, seedNotices, seedPetLogs, seedPets, seedPlaces, seedPosts, seedReports, seedRequests,
+  LogKind, Pet, PetLogs,
   CommunityPost, Conversation, MyApplication, Notice, Place, PlaceReview, Report, SitterRequest, UserPage, VerificationStatus,
 } from "./data";
 
@@ -161,7 +162,30 @@ function useAppState() {
   const savePlace = (place: Place) => setPlaces((list) => (list.some((p) => p.id === place.id) ? list.map((p) => (p.id === place.id ? place : p)) : [...list, place]));
   const deletePlace = (id: number) => { setPlaces((list) => list.filter((p) => p.id !== id)); resolveReportsFor("place", String(id)); };
 
+  // ----- my pets (Pet + per-type log tables, as in the ERD) -----
+  const [pets, setPets] = useState<Pet[]>(seedPets);
+  const [petLogs, setPetLogs] = useState<PetLogs>(seedPetLogs);
+  const touchPet = (petId: string) => setPets((list) => list.map((p) => (p.id === petId ? { ...p, updatedAt: isoDay(0) } : p)));
+  /** Creates the pet when its id is new, otherwise updates it. */
+  const savePet = (pet: Pet) => {
+    const previous = pets.find((p) => p.id === pet.id);
+    setPets((list) => (previous ? list.map((p) => (p.id === pet.id ? { ...pet, updatedAt: isoDay(0) } : p)) : [...list, { ...pet, updatedAt: isoDay(0) }]));
+    // Sitter requests for this pet show the latest profile (vaccination, age, weight…)
+    if (previous) setRequests((list) => list.map((r) => (r.petId === pet.id || (r.owner === ME && r.pet === previous.name) ? { ...r, petId: pet.id, pet: pet.name, breed: pet.breed || r.breed, age: petAge(pet.birthDate), weight: `${pet.weight} kg`, vaccinated: pet.isVaccinated, image: pet.imageUrl || r.image } : r)));
+  };
+  /** Adds or updates one row in a log table (matched by id). */
+  const saveLog = <K extends LogKind>(kind: K, row: PetLogs[K][number]) => {
+    setPetLogs((logs) => {
+      const rows = logs[kind] as PetLogs[K][number][];
+      const next = rows.some((r) => r.id === row.id) ? rows.map((r) => (r.id === row.id ? row : r)) : [...rows, row];
+      return { ...logs, [kind]: next };
+    });
+    touchPet(row.petId);
+  };
+  const deleteLog = (kind: LogKind, id: string) => setPetLogs((logs) => ({ ...logs, [kind]: (logs[kind] as { id: string }[]).filter((r) => r.id !== id) }));
+
   return {
+    pets, petLogs, savePet, saveLog, deleteLog,
     mode, setMode, authenticated, page, setPage, focus, requireAuth, completeLogin, logout, profileName, profileReturn, openProfile, toast, notify,
     users, verification, setVerification, toggleUserHidden, deleteUser, hiddenNames, isVerified,
     notices, addNotice, markNoticesRead,

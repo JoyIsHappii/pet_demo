@@ -38,9 +38,10 @@ Maya starts **Not verified**. To see the verified badge appear:
 | `src/store.tsx` | One React context with all state and every user action (`apply`, `matchSitter`, `markFound`, `addReport`, …). **Each action maps to a future API call.** |
 | `src/Rail.tsx` | Right-hand side panel used on Home and Community |
 | `src/ui.tsx` | Shared pieces: `Modal`, `ReportModal`, `PersonAvatar`, `Badge`, `StarRating`, `EmptyState` |
-| `src/App.tsx` | App shell, header, notifications, Home, profiles, verification, login/signup, My Pets, legal pages |
+| `src/App.tsx` | App shell, header, notifications, Home, profiles, verification, login/signup, legal pages |
 | `src/Community.tsx` | Feed, post card, composer, lost & found |
 | `src/Sitters.tsx` | Sitter board, request detail, choose match, apply, reviews, create/delete request |
+| `src/Pets.tsx` | My Pets: pet profile form, health cards, and the log editor (one config per ERD log table) |
 | `src/Messages.tsx` | Conversations, thread, context panel, archive |
 | `src/MapPage.tsx` | Map canvas, place detail, reviews, place reports |
 | `src/Admin.tsx` | Admin login, dashboard, moderation tables, spots, user management |
@@ -95,7 +96,7 @@ Map category colours live in `mapCategories` (`src/MapPage.tsx`) and all keep at
 | Map: categories, pins, use my location, zoom/drag, place detail, write review + photo, like review, report place | ✅ |
 | Notifications: unread count, mark all read, deep links | ✅ |
 | Admin: dashboard counts, hide/unhide/delete posts and requests, place reports (reject/edit/delete), add/edit/delete spots, verify/hide/delete users | ✅ |
-| My Pets: health dashboards (read-only) | ⚠️ see §4 |
+| My Pets: add / edit pets; add, edit, delete entries in every health log and emergency contacts | ✅ |
 
 ---
 
@@ -105,15 +106,21 @@ Design these, or hide them before launch:
 
 | Screen | Control | Needed |
 |---|---|---|
-| My Pets | **Add another pet** | Add-pet flow (FLOWS §9.4 lists the fields) |
-| My Pets | **Edit profile** (pet) | Edit-pet form |
-| My Pets | **Last 7 days** | Date-range options |
-| My Pets | **View log / View all** (poop & pee, food, weight, vaccines, vet visits, walking) | Log list + “add entry” screens for each tracker |
 | Edit profile (member) | **Save changes** | Shows a toast but doesn’t store anything; needs real fields and validation |
 | Login | **Keep me signed in** | Session-length decision |
 | Messages | Attachments | Not in scope? Confirm |
 
 ---
+
+### My Pets vs. the ERD (needs a decision from the database team)
+
+- **Species:** the UI needs dog vs. cat (Walking is dog-only), but `Pet` has no species column. The prototype adds `species`; the scope doc already lists it as an open item.
+- **Birth date (decided):** the app stores `birthDate` and shows the age worked out from it, so it stays correct every year. Replace the ERD’s `age int` column with `birthDate date`.
+- **Care notes on requests (new, no schema change):** the request page shows the pet’s `notes` by joining `SitterRequest.petId → Pet`. Pet profiles stay private; only the notes, gender and neutered status of the pet on a posted request are shown. A per-request opt-out (`shareCareNotes`) was considered and left for later.
+- **Vaccination status (new):** add `isVaccinated boolean` to `Pet` (owner sets Vaccinated / Not yet). Sitter requests show it to sitters; either join it from `Pet` via `SitterRequest.petId` or copy it onto the request when it’s posted.
+- **EmergencyContact:** the ERD has `clinicName, phone, address, notes`; the scope doc lists only `clinicName, phone` and says exact addresses aren't stored. The prototype keeps `address` optional.
+- **Vaccine status** (`COMPLETED` / `UPCOMING` in the scope doc) isn't a column; the prototype derives it from `administeredOn` and `nextDueOn`.
+- **Gender enum values** aren't listed; the prototype uses Female / Male.
 
 ## 5. Docs out of date with the final design
 
