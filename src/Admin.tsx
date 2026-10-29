@@ -273,19 +273,38 @@ function SpotForm({ existing, onClose }: { existing: Place | "new"; onClose: () 
   const [name, setName] = useState(base?.name || "");
   const [category, setCategory] = useState<SpotCategory>(base?.category || "Parks & Off-Leash");
   const [address, setAddress] = useState(base?.address || "");
+  const [phone, setPhone] = useState(base?.phone || "");
+  const [hours, setHours] = useState(base?.hours === "Hours not listed" ? "" : base?.hours || "");
+  const [description, setDescription] = useState(base?.description || "");
+  const [sponsored, setSponsored] = useState(Boolean(base?.sponsored));
   const [image, setImage] = useState(base?.image || "");
   const [error, setError] = useState("");
+  const MAX = 600;
   const save = () => {
-    if (!name.trim() || !address.trim()) return setError("Spot name and address are required.");
-    savePlace(base ? { ...base, updatedAt: isoDay(0), name: name.trim(), category, address: address.trim(), image: image || base.image } : { id: Date.now(), name: name.trim(), category, address: address.trim(), image: image || photos.spot1, updatedAt: isoDay(0), latitude: 49.262 + Math.random() * 0.024, longitude: -123.17 + Math.random() * 0.09, /* mock: a real build geocodes the address */ rating: 0, hours: "Hours not listed", description: "Newly added pet-friendly place.", reviews: [] });
+    if (!name.trim() || !address.trim() || !description.trim()) return setError("Spot name, address and description are required.");
+    const details = { name: name.trim(), category, address: address.trim(), phone: phone.trim() || undefined, hours: hours.trim() || "Hours not listed", description: description.trim(), sponsored, updatedAt: isoDay(0) };
+    savePlace(base ? { ...base, ...details, image: image || base.image } : { id: Date.now(), ...details, image: image || photos.spot1, latitude: 49.262 + Math.random() * 0.024, longitude: -123.17 + Math.random() * 0.09, /* mock: a real build geocodes the address */ rating: 0, reviews: [] });
     notify(base ? "Spot updated." : "Spot added to the map.");
     onClose();
   };
-  return <Modal onClose={onClose}><span className="eyebrow">{base ? "Edit place" : "New place"}</span><h2>{base ? "Update spot details" : "Add a pet-friendly spot"}</h2><div className="form-grid"><label>Spot name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Spot name" /></label><label>Category<select value={category} onChange={(event) => setCategory(event.target.value as SpotCategory)}>{mapCategories.map((item) => <option key={item.name}>{item.name}</option>)}</select></label><label className="full-field">Address / Location<input value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Vancouver, BC" /></label><label className="full-field">Upload photo<div className="upload-field">{image ? <img loading="lazy" src={image} alt="" className="upload-preview" /> : <Plus size={20} />}<span>{image ? "Change photo" : "Choose a photo"}</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) setImage(URL.createObjectURL(file)); }} /></div></label></div>{error && <div className="form-error">{error}</div>}<div className="modal-actions"><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" onClick={save}>Save spot</button></div></Modal>;
+  return <Modal wide onClose={onClose}><span className="eyebrow">{base ? "Edit place" : "New place"}</span><h2>{base ? "Update spot details" : "Add a pet-friendly spot"}</h2>
+    <div className="form-grid">
+      <label><span>Spot name<span className="req" aria-hidden="true"> *</span></span><input value={name} onChange={(event) => { setName(event.target.value); setError(""); }} placeholder="e.g. Spanish Banks Off-Leash" /></label>
+      <label><span>Category<span className="req" aria-hidden="true"> *</span></span><select value={category} onChange={(event) => setCategory(event.target.value as SpotCategory)}>{mapCategories.map((item) => <option key={item.name}>{item.name}</option>)}</select></label>
+      <label className="full-field"><span>Address<span className="req" aria-hidden="true"> *</span></span><input value={address} onChange={(event) => { setAddress(event.target.value); setError(""); }} placeholder="Street address, Vancouver, BC" /><small className="field-hint">The map pin is placed from this address.</small></label>
+      <label><span>Opening hours</span><input value={hours} onChange={(event) => setHours(event.target.value)} placeholder="e.g. Open 6 AM – 10 PM" /><small className="field-hint">Leave empty to show “Hours not listed”.</small></label>
+      <label><span>Phone</span><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 604-555-0123" /><small className="field-hint">Optional. Shown on the place page.</small></label>
+      <label className="full-field"><span>Description<span className="req" aria-hidden="true"> *</span></span><textarea rows={4} maxLength={MAX} value={description} onChange={(event) => { setDescription(event.target.value); setError(""); }} placeholder="What makes it pet-friendly? Off-leash rules, water bowls, patio, parking…" /><small className="field-hint field-count">{description.length}/{MAX}</small></label>
+      <label className="full-field"><span>Photo</span><div className="upload-field">{image ? <img loading="lazy" src={image} alt="" className="upload-preview" /> : <Plus size={20} />}<span>{image ? "Change photo" : "Choose a photo"}</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) setImage(URL.createObjectURL(file)); }} /></div></label>
+      <div className="full-field toggle-list spot-toggles"><label className="toggle-row"><span><strong>Sponsored spot</strong><small>Adds a Sponsored tag and a gold dot on the map pin.</small></span><input type="checkbox" checked={sponsored} onChange={() => setSponsored(!sponsored)} /><i></i></label></div>
+    </div>
+    {error && <div className="form-error">{error}</div>}
+    <div className="modal-actions"><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" onClick={save}>{base ? "Save changes" : "Add spot"}</button></div></Modal>;
 }
 
 function SpotsAdmin() {
-  const { places, deletePlace, reports, resolveReport, notify } = useStore();
+  const { places, savePlace, deletePlace, reports, resolveReport, notify } = useStore();
+  const toggleHidden = (spot: Place) => { savePlace({ ...spot, hidden: !spot.hidden }); notify(spot.hidden ? `${spot.name} is back on the map.` : `${spot.name} is hidden from the map.`); };
   const [category, setCategory] = useState<"All" | SpotCategory>("All");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(places[0]?.id);
@@ -303,7 +322,7 @@ function SpotsAdmin() {
         </section>}
         <div className="category-tabs">{categories.map((item) => { const Icon = item.icon; return <button className={category === item.name ? "active" : ""} key={item.name} onClick={() => setCategory(item.name)}><Icon size={16} /> {item.name}</button>; })}</div>
         <div className="spots-toolbar"><div className="search-field"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search places..." /></div><button className="primary-button" onClick={() => setEditing("new")}><Plus size={17} /> Add Spot</button></div></div>
-        <div className="admin-spot-list">{filtered.map((spot) => <article className={selected?.id === spot.id ? "admin-spot-card selected" : "admin-spot-card"} key={spot.id} onClick={() => setSelectedId(spot.id)}><img loading="lazy" src={spot.image} alt="" /><div><div className="spot-card-badges"><Badge tone="blue">{spot.category}</Badge>{spot.sponsored && <Badge tone="amber">Sponsored</Badge>}{placeReports.some((r) => r.targetId === String(spot.id)) && <Badge tone="red"><Flag size={11} /> Reported</Badge>}</div><h3>{spot.name}</h3><p><MapPin size={14} /> {spot.address}</p><div className="row-actions"><button onClick={(event) => { event.stopPropagation(); setEditing(spot); }}><Edit3 size={15} /> Edit</button><button className="danger" onClick={(event) => { event.stopPropagation(); setDeleting(spot); }}><Trash2 size={15} /> Delete</button></div></div></article>)}{!filtered.length && <p className="muted">No spots match this filter.</p>}</div></div>
+        <div className="admin-spot-list">{filtered.map((spot) => <article className={["admin-spot-card", selected?.id === spot.id ? "selected" : "", spot.hidden ? "is-hidden" : ""].join(" ").trim()} key={spot.id} onClick={() => setSelectedId(spot.id)}><img loading="lazy" src={spot.image} alt="" /><div><div className="spot-card-badges"><Badge tone="blue">{spot.category}</Badge>{spot.sponsored && <Badge tone="amber">Sponsored</Badge>}{spot.hidden && <Badge tone="slate"><EyeOff size={11} /> Hidden</Badge>}{placeReports.some((r) => r.targetId === String(spot.id)) && <Badge tone="red"><Flag size={11} /> Reported</Badge>}</div><h3>{spot.name}</h3><p><MapPin size={14} /> {spot.address}</p><div className="row-actions"><button onClick={(event) => { event.stopPropagation(); setEditing(spot); }}><Edit3 size={15} /> Edit</button><button onClick={(event) => { event.stopPropagation(); toggleHidden(spot); }}>{spot.hidden ? <><Eye size={15} /> Unhide</> : <><EyeOff size={15} /> Hide</>}</button><button className="danger" onClick={(event) => { event.stopPropagation(); setDeleting(spot); }}><Trash2 size={15} /> Delete</button></div></div></article>)}{!filtered.length && <p className="muted">No spots match this filter.</p>}</div></div>
       <div className="spots-map-sticky"><MapCanvas places={filtered} selected={selected} onSelect={(p) => setSelectedId(p.id)} /></div>
       {editing && <SpotForm existing={editing} onClose={() => setEditing(null)} />}
       {deleting && <ConfirmDelete what={`“${deleting.name}”`} onCancel={() => setDeleting(null)} onConfirm={() => { deletePlace(deleting.id); setDeleting(null); notify("Place deleted from the map."); }} />}

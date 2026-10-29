@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Beer, ChevronRight, Clock, Coffee, Flag, Heart, HeartPulse, Hotel, ImagePlus, LocateFixed, MapPin, Minus, Mountain, MoreVertical, Plus, Search, Star, Store, Trees, X, History, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Beer, ChevronRight, Clock, Coffee, Flag, Heart, HeartPulse, Hotel, ImagePlus, LocateFixed, MapPin, Minus, Mountain, MoreVertical, Phone, Plus, Search, Star, Store, Trees, X, History, AlertTriangle } from "lucide-react";
 import { isoDay, Place, SpotCategory } from "./data";
 import { useStore } from "./store";
 import { PersonAvatar, ReportModal, StarRating } from "./ui";
@@ -165,7 +165,7 @@ function PlaceDetail({ place, back }: { place: Place; back: () => void }) {
               {/* {menuOpen && <div className="post-menu"><button onClick={() => { setMenuOpen(false); if (requireAuth()) setReporting(true); }}><Flag size={14} /> Report this place</button></div>} */}
             </div>
           </div>
-          <div className="place-meta"><span><Star size={15} fill="currentColor" /> <strong>{avg.toFixed(1)}</strong> ({place.reviews.length} reviews)</span><span><Clock size={15} /> {place.hours}</span><span className="place-updated"><History size={15} /> Updated {updatedLabel(place.updatedAt)}</span></div>
+          <div className="place-meta"><span><Star size={15} fill="currentColor" /> <strong>{avg.toFixed(1)}</strong> ({place.reviews.length} reviews)</span><span><Clock size={15} /> {place.hours}</span>{place.phone && <a className="place-phone" href={`tel:${place.phone.replace(/[^0-9+]/g, "")}`}><Phone size={15} /> {place.phone}</a>}<span className="place-updated"><History size={15} /> Updated {updatedLabel(place.updatedAt)}</span></div>
           {daysSince(place.updatedAt) > STALE_DAYS && <div className="place-stale-note" role="note"><AlertTriangle size={16} /><span>Info may be out of date. Hours or dog rules could have changed.</span><button onClick={() => { if (requireAuth()) setReporting(true); }}>Report incorrect info</button></div>}
           <p className="long-description">{place.description}</p>
 
