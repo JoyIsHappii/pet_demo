@@ -4,8 +4,23 @@
     {
       "name": "avancado",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "8443"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "8443"
+      ],
       "port": 8443
+    },
+    {
+      "name": "team-next",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/joy/WD/Projects/m1-0126-wd301-wd-401-term-project-group-1",
+        "run",
+        "dev"
+      ],
+      "port": 3000
     }
   ]
 }
